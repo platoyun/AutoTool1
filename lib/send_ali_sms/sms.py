@@ -52,8 +52,8 @@ if __name__ == '__main__':
     # send_sms_by_phone(phone='19567693108', name="Tom", airline="NH011", time="2024-12-25") #成功的
     # send_sms_by_phone(phone='19567693108', name="李琴123", airline="NH011", time="2024-12-25") #成功的
     # send_sms_by_phone(phone='19567693108', name="4612450814", airline="NH011", time="2024-12-25")
-    # send_sms_by_phone(phone='19567693108', name="T4612450814", airline="NH011", time="2024-12-25")
-    send_sms_by_phone(phone='18973194769', name="T50814", airline="NH011", time="2024-12-25") #成功的
+    send_sms_by_phone(phone='19567693108', name="T4612450814", airline="NH011", time="2024-12-25")
+    # send_sms_by_phone(phone='18973194769', name="T50814", airline="NH011", time="2024-12-25") #成功的
 
 
 

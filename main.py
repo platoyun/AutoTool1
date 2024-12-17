@@ -6,19 +6,20 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import random
 import os
+import sys
 import ddddocr
 from selenium.webdriver.common.keys import Keys
 from datetime import datetime, timedelta
 from urllib3.exceptions import ReadTimeoutError
 from lib.send_ali_sms.sms import send_sms_by_phone
-from config import *
+import yaml
 
-max_time = 3
+max_time = 5
 
 
 def random_wait_decorator(func):
     def wrapper(*args, **kwargs):
-        wait_time = random.uniform(1, max_time)  # 生成 1 到 3 秒之间的随机浮点数
+        wait_time = random.uniform(3, max_time)  # 生成 1 到 3 秒之间的随机浮点数
         time.sleep(wait_time)  # 等待随机时间
         return func(*args, **kwargs)  # 调用原始函数
 
@@ -26,19 +27,38 @@ def random_wait_decorator(func):
 
 
 class Book:
-    def __init__(self, login_cnt=-1, password="Wetravel88",
-                 firstTripDate="2024-12-20", firstTripEndDate="2024-12-15",
-                 firstTripFrom="ORD", firstTripTo="TYO",
-                 secTripDate="2025-05-16", secTripEndDate="2025-04-16",
-                 sedTripFrom="TYO", secTripTo="HNL", fstTrpClass="Business", sndTrpClass="Business", phone="18973194769"):
+    def __init__(self, login_cnt=-1, password=None,
+                 firstTripDate=None, firstTripEndDate=None,
+                 firstTripFrom=None, firstTripTo=None,
+                 secTripDate=None, secTripEndDate=None,
+                 sedTripFrom=None, secTripTo=None, fstTrpClass=None, sndTrpClass=None,
+                 phone="18973194769",customers=None
+                 ):
         # driver_path = '/chromedriver-mac-arm64/chromedriver'  # 替换为您的 ChromeDriver 路径
-        self.chrome_service = Service('chromedriver-mac-arm64/chromedriver')
+        self.chrome_service = Service('chromedriver.exe')
         # 设置 Chrome 选项
         self.chrome_options = webdriver.ChromeOptions()
-        # self.chrome_options.add_argument('--incognito')
-        # self.chrome_options.add_argument('--disable-extensions')
-        # self.chrome_options.add_argument('--no-sanbox')
+        self.chrome_options.add_argument('--incognito')
+        self.chrome_options.add_argument('--disable-extensions')
+        self.chrome_options.add_argument('--no-sanbox')
         self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+
+        self.chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
+        self.chrome_options.add_experimental_option('useAutomationExtension', False)
+        self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        self.chrome_options.add_argument("--no-sandbox")
+        self.chrome_options.add_argument("--disable-gpu")
+        self.chrome_options.add_argument("start-maximized")
+        self.chrome_options.add_argument("enable-automation")
+        self.chrome_options.add_argument("--disable-infobars")
+        self.chrome_options.add_argument("--disable-dev-shm-usage")
+        self.chrome_options.add_argument('--disable-web-security')
+        # chrome_options.add_argument('--user-data-dir')
+        self.chrome_options.add_argument('--allow-running-insecure-content')
+        self.chrome_options.add_argument('--incognito')
+        self.chrome_options.add_argument('--enable-unsafe-swiftshader')
+
+
         self.driver = webdriver.Chrome(service=self.chrome_service, options=self.chrome_options)
         # self.driver.implicitly_wait(10)
         self.url = "https://www.ana.co.jp/zh/cn/"
@@ -62,6 +82,7 @@ class Book:
         self.fstDate = None
         self.sndDate = None
         self.phone = phone
+        self.customers = customers
 
     @random_wait_decorator
     def click_element(self, locator):
@@ -99,6 +120,7 @@ class Book:
 
     def login(self):
         self.wait_element((By.XPATH, '//*[@data-scclick="zh_cn_TOP_txt_登录"and text()="登录"]'))
+        self.driver.execute_script("document.body.style.zoom='60%'")
 
         elements = self.wait_elements_return((By.XPATH, '//*[@data-scclick="zh_cn_TOP_txt_登录"and text()="登录"]'))
         # 点击第一个元素（索引为0）
@@ -112,14 +134,33 @@ class Book:
         # password_input = self.driver.find_element(By.NAME, 'member_password')  # 替换为实际的密码输入框的选择器
         username_input = self.wait_element((By.NAME, 'member_no'))  # 替换为实际的用户名输入框的选择器)
         password_input = self.wait_element((By.NAME, 'member_password'))  # 替换为实际的密码输入框的选择器
+
         # 输入用户名和密码
         self.click_element(username_input)
         self.login_cnt += 1
-        username_input.send_keys(Customers[self.login_cnt % 4])
+        username_input.send_keys(self.customers[self.login_cnt % 4])
         self.click_element(password_input)
         password_input.send_keys(self.password)
+
+        ele = WebDriverWait(self.driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, '//div[@id="asw-tab__item-box-1"]')))
+        # ele = self.driver.find_element(By.XPATH, '//div[@id="asw-tab__item-box-1"]')
+        self.driver.execute_script("arguments[0].scrollTop=arguments[0].scrollHeight", ele)
         self.click_element((By.ID, "login"))
 
+        # time.sleep(3)
+        ele = WebDriverWait(self.driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, '//span[text()="继续（登录）"]')))
+        self.driver.execute_script("arguments[0].scrollIntoView(true);", ele)
+        # ele = WebDriverWait(self.driver, 30).until(
+        #     EC.presence_of_element_located((By.XPATH, '//div[@class="asw-modal__body asw-scroll ps ps--active-y"]')))
+        # ele = self.driver.find_element(By.XPATH, '//div[@class="asw-modal__body asw-scroll ps ps--active-y"]')
+        # self.driver.execute_script("arguments[0].scrollTop=arguments[0].scrollHeight", ele)
+        # ele = self.driver.find_element(By.XPATH, '//div[@class="asw-modal__body asw-scroll ps ps--active-y"]')
+        # self.driver.execute_script("arguments[0].scrollTop=arguments[0].scrollHeight", ele)
+        # if ele:
+        #     self.driver.execute_script("arguments[0].scrollTop=arguments[0].scrollHeight", ele)
+        # self.click_element((By.ID, "login"))
         self.click_element((By.XPATH, '//span[text()="继续（登录）"]'))
         # print("clicked ....")
 
@@ -130,8 +171,12 @@ class Book:
                 self.driver.execute_script("navigator.webdriver = undefined;")  # 使 webdriver 属性为 undefined
                 self.driver.get(self.url)  # 替换为您的登录页面 URL
                 # 最大化窗口
+
                 self.driver.maximize_window()
+                self.driver.execute_script("document.body.style.zoom='60%'")
                 self.login()
+            else:
+                self.driver.execute_script("document.body.style.zoom='60%'")
 
             self.wait_element((By.XPATH, '//span[text()="里程兑换机票"]'))
             self.click_element((By.XPATH, '//span[text()="里程兑换机票"]'))
@@ -147,6 +192,8 @@ class Book:
                     self.driver.switch_to.window(handle)
                     if first:
                         break
+            self.driver.execute_script("document.body.style.zoom='60%'")
+
             time.sleep(random.randint(1, 5))
             self.click_element((By.XPATH, '//a[text()="Multiple cities/Mixed classes"]'))
             # 第一段Trip
@@ -178,7 +225,7 @@ class Book:
 
         finally:
             # 关闭浏览器
-            # input("input Enter:  ")
+            input("input Enter:  ")
             self.driver.quit()
 
     def traverseFirDateSelBusTrip(self, newDate):
@@ -374,13 +421,13 @@ class Book:
                 ele.click()
             except:
                 pass
-        cusname = Customers[self.login_cnt % 4]
+        cusname = self.customers[self.login_cnt % 4]
         print(f"当前用户名： {cusname}")
         print(f"第一班日期： {self.fstDate}")
         print(f"第一班班次： {self.fstLine}")
         print(f"第二班日期： {self.sndDate}")
         print(f"第二班班次： {self.sndLine}")
-        # send_sms_by_phone(phone=self.phone, name='T'+cusname[5:], airline=self.fstLine[6:], time=self.fstDate)
+        send_sms_by_phone(phone=self.phone, name='T' + cusname[5:], airline=self.fstLine[6:], time=self.fstDate)
 
         time.sleep(random.randint(1, max_time))
         self.driver.get_screenshot_as_file('Result.png')  # 将截图保存为 screenshot.png
@@ -438,19 +485,33 @@ class Book:
             print(f"{file_name} 不存在。")
 
 
+
+
+
+def get_resource_path(relative_path):
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
+
 if __name__ == '__main__':
-    book = Book(password=password,
-                firstTripDate=firstTripDate, firstTripEndDate=firstTripDate,
-                firstTripFrom=firstTripFrom, firstTripTo=firstTripTo,
-                secTripDate=secTripDate, secTripEndDate=secTripEndDate,
-                sedTripFrom=sedTripFrom, secTripTo=secTripTo, fstTrpClass=fstTrpClass, sndTrpClass=sndTrpClass)
-    # 2025-05-17 ~ 2025-04-07
-    # 2025-04-07 --> Economy class
-    book.run(True)
-    # for i in range(10):
-    #     print(f'{i+1} times')
-    #     try:
-    #         book = Book()
-    #         book.run(True)
-    #     except:
-    #         pass
+    configpath = get_resource_path('config.yaml')
+    if not os.path.exists(configpath):
+        print(f"Configuration file does not exist at: {configpath}")
+    else:
+        with open('config.yaml', 'r', encoding='utf-8') as config_file:
+            config = yaml.safe_load(config_file)
+
+        book = Book(password=config['password'],
+                    firstTripDate=config['firstTripDate'], firstTripEndDate=config['firstTripEndDate'],
+                    firstTripFrom=config['firstTripFrom'], firstTripTo=config['firstTripTo'],
+                    secTripDate=config['secTripDate'], secTripEndDate=config['secTripEndDate'],
+                    sedTripFrom=config['sedTripFrom'], secTripTo=config['secTripTo'], fstTrpClass=config['fstTrpClass'],
+                    sndTrpClass=config['sndTrpClass'],
+                    phone=config['phone'],
+                    customers=config['Customers']
+                    )
+        res = book.run(True)
+        print(res)
